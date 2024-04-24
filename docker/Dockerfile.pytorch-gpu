@@ -21,11 +21,11 @@
 
 # -- Prerequisite: copy files ------------------------------------------------------------------------
 
-FROM nvidia/cuda:11.3.1-cudnn8-runtime-ubuntu20.04 AS copy-files
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04 AS copy-files
 
 COPY --chown=root:root --chmod=0644 docker/configs/aws-config /files/aws-config
 COPY --chown=root:root --chmod=0644 docker/configs/build.pip.conf /files/build.pip.conf
-COPY --chown=root:root --chmod=0644 docker/requirements/linux-amd64-py3.9-pytorch-gpu-requirements.txt /files/pytorch-gpu-requirements.txt
+COPY --chown=root:root --chmod=0644 docker/requirements/linux-amd64-py3.11-pytorch-gpu-requirements.txt /files/pytorch-gpu-requirements.txt
 
 ######################################################################################################
 # Base images
@@ -33,7 +33,7 @@ COPY --chown=root:root --chmod=0644 docker/requirements/linux-amd64-py3.9-pytorc
 
 # -- Base image --------------------------------------------------------------------------------------
 
-FROM nvidia/cuda:11.3.1-cudnn8-runtime-ubuntu20.04 AS base
+FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04 AS base
 
 USER root
 
@@ -44,12 +44,11 @@ ENV LC_ALL C.UTF-8
 
 RUN sed -i -e "s/https/http/g" /etc/apt/sources.list.d/cuda.list && \
     apt-get update && \
-    echo "===> Upgrade existing packages...." && \
     apt-get -y upgrade && \
-    echo "===> Installing ca-certificates curl gnupg libbz2-1.0 liblz4-1 liblzma5 libsnappy1v5 libzstd1 netcat postgresql-client python3.9 python3.9-venv python3-pip tzdata unzip wget zlib1g...." && \
     apt-get install -yq --no-install-recommends \
     ca-certificates \
     curl \
+    git \
     gnupg \
     libbz2-1.0 \
     libgl1 \
@@ -59,23 +58,13 @@ RUN sed -i -e "s/https/http/g" /etc/apt/sources.list.d/cuda.list && \
     libzstd1 \
     netcat \
     postgresql-client \
-    python3.9 \
-    python3.9-venv \
+    python3.11 \
+    python3.11-venv \
     python3-pip \
     tzdata \
     unzip \
     wget \
     zlib1g && \
-    echo "===> Fetch official Ubuntu Git Maintainers signing key...." && \
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E1DD270288B4E6030699E45FA1715D88E1DF1F24 && \
-    echo "===> Add Git stable releases repo...." && \
-    UBUNTU_CODENAME="$(. /etc/os-release && echo ${UBUNTU_CODENAME})" && \
-    echo "deb http://ppa.launchpadcontent.net/git-core/ppa/ubuntu ${UBUNTU_CODENAME} main" >> /etc/apt/sources.list.d/git-core.list && \
-    echo "deb-src http://ppa.launchpadcontent.net/git-core/ppa/ubuntu ${UBUNTU_CODENAME} main" >> /etc/apt/sources.list.d/git-core.list && \
-    echo "===> Installing git...." && \
-    apt-get update && \
-    apt-get install -yq --no-install-recommends \
-    git && \
     apt-get clean && \
     sed -i -e "s/http/https/g" /etc/apt/sources.list.d/cuda.list && \
     rm -rf /var/lib/apt/lists/*
@@ -102,7 +91,7 @@ FROM certs-base AS build-base
 
 RUN echo "===> Installing compilers...." && \
     apt-get update && \
-    apt-get install -yq --no-install-recommends autoconf build-essential libpq-dev python3.9-dev swig
+    apt-get install -yq --no-install-recommends autoconf build-essential libpq-dev python3.11-dev swig
 
 # -- Base image (argbash) ----------------------------------------------------------------------------
 
@@ -123,9 +112,9 @@ RUN cd /tmp && \
 FROM build-base AS python-base
 
 RUN echo "===> Installing latest version of pip...." && \
-    python3.9 -m pip install --upgrade pip && \
+    python3.11 -m pip install --upgrade pip && \
     echo "===> Installing build package...." && \
-    python3.9 -m pip install build
+    python3.11 -m pip install build
 
 ######################################################################################################
 # Build
@@ -172,7 +161,7 @@ RUN find /code -type d -exec chmod 0755 "{}" "+" && \
     find /code/src -type f -exec chmod 0644 "{}" "+" && \
     find /code/tests -type f -exec chmod 0644 "{}" "+" && \
     echo "===> Building the dioptra wheel...." && \
-    python3.9 -m build
+    python3.11 -m build
 
 # -- Build: create virtual environment ---------------------------------------------------------------
 
@@ -185,8 +174,8 @@ ARG VIRTUAL_ENV=/opt/venv
 
 RUN echo "===> Creating Python virtual environment...." && \
     umask 0002 && \
-    python3.9 -m pip install --no-cache-dir --upgrade pip && \
-    python3.9 -m venv ${VIRTUAL_ENV}
+    python3.11 -m pip install --no-cache-dir --upgrade pip && \
+    python3.11 -m venv ${VIRTUAL_ENV}
 
 ENV PATH ${VIRTUAL_ENV}/bin${PATH:+:${PATH}}
 ENV VIRTUAL_ENV ${VIRTUAL_ENV}
