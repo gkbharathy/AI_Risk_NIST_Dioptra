@@ -78,6 +78,17 @@ def build_tag_ref(tag: models.Tag) -> dict[str, Any]:
 # -- Full Types -----------------------------------------------------------------
 
 
+def build_queue_ref(queue: models.Queue) -> dict[str, Any]:
+    return {
+        "id": queue.queue_id,
+        "name": queue.name,
+        "url": f"/queue/{queue.queue_id}",
+    }
+
+
+# -- Ref Types -----------------------------------------------------------------
+
+
 def build_user(user: models.User) -> dict[str, Any]:
     """Build a User response dictionary.
 
@@ -154,6 +165,21 @@ def build_group(group: models.Group) -> dict[str, Any]:
         "members": list(members.values()),
         "created_on": group.created_on,
         "last_modified_on": group.last_modified_on,
+    }
+
+
+def build_queue(queue: models.Queue) -> dict[str, Any]:
+    return {
+        "id": queue.resource_id,
+        "snapshot_id": queue.resource_snapshot_id,
+        "name": queue.name,
+        "description": queue.description,
+        "user": build_user_ref(queue.creator),
+        "group": build_group_ref(queue.resource.owner),
+        "created_on": queue.created_on,
+        "last_modified_on": queue.resource.last_modified_on,
+        "latest_snapshot": True,
+        "tags": [build_tag_ref(tag) for tag in queue.tags],
     }
 
 

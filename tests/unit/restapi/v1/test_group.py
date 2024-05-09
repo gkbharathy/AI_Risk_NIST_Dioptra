@@ -319,7 +319,6 @@ def test_group_search_query(
     )
 
 
-@pytest.mark.v1_test
 def test_cannot_register_existing_group_name(
     client: FlaskClient,
     db: SQLAlchemy,
@@ -342,7 +341,6 @@ def test_cannot_register_existing_group_name(
     )
 
 
-@pytest.mark.v1_test
 def test_rename_group(
     client: FlaskClient,
     db: SQLAlchemy,
