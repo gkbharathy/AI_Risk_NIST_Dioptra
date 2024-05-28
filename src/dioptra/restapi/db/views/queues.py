@@ -14,9 +14,9 @@
 #
 # ACCESS THE FULL CC BY 4.0 LICENSE HERE:
 # https://creativecommons.org/licenses/by/4.0/legalcode
-from flask_sqlalchemy import SQLAlchemy
-
 from string import Template
+
+from flask_sqlalchemy import SQLAlchemy
 from importlib_resources import files
 from sqlalchemy import select, text
 

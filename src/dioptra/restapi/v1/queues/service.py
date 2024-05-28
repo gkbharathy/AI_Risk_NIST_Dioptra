@@ -34,6 +34,7 @@ LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
 RESOURCE_TYPE: Final[str] = "queue"
 
+
 class QueueService(object):
     """The service methods for registering and managing queues by their unique id."""
 
@@ -131,9 +132,8 @@ class QueueService(object):
             log.debug("Searching is not implemented", search_string=search_string)
             raise SearchNotImplementedError
 
-        stmt = (
-            select(func.count(models.Resource.resource_id))
-            .filter_by(resource_type=RESOURCE_TYPE, is_deleted=False)
+        stmt = select(func.count(models.Resource.resource_id)).filter_by(
+            resource_type=RESOURCE_TYPE, is_deleted=False
         )
         stmt = (
             select(func.count(models.Queue.resource_id))
@@ -227,7 +227,7 @@ class QueueIdService(object):
         error_if_not_found: bool = False,
         commit: bool = True,
         **kwargs,
-    ) -> models.Queue:
+    ) -> models.Queue | None:
         """Rename a queue.
 
         Args:
@@ -250,17 +250,17 @@ class QueueIdService(object):
 
         queue = viewsdb.get_latest_queue(db, resource_id=queue_id)
 
-        group_id = queue.resource.group_id
-        if self._queue_name_service.get(name, group_id=group_id, log=log) is not None:
-            log.error("Queue name already exists", name=name)
-            raise QueueAlreadyExistsError
-
         if queue is None:
             if error_if_not_found:
                 log.debug("Queue not found", queue_id=queue_id)
                 raise QueueDoesNotExistError
 
             return None
+
+        group_id = queue.resource.group_id
+        if self._queue_name_service.get(name, group_id=group_id, log=log) is not None:
+            log.error("Queue name already exists", name=name)
+            raise QueueAlreadyExistsError
 
         new_queue = models.Queue(
             name=name,
@@ -292,19 +292,20 @@ class QueueIdService(object):
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
 
-        stmt = select(models.Queue).filter_by(resource_id=queue_id)
-        queue: models.Queue | None = db.session.scalars(stmt).first()
+        stmt = select(models.Resource).filter_by(
+            resource_type=RESOURCE_TYPE, is_deleted=False
+        )
+        queue_resource = db.session.scalars(stmt).first()
 
-        if queue is None:
+        if queue_resource is None:
             raise QueueDoesNotExistError
 
         deleted_resource_lock = models.ResourceLock(
             resource_lock_type="delete",
-            resource=queue.resource,
+            resource=queue_resource,
         )
         db.session.add(deleted_resource_lock)
         db.session.commit()
-
         log.debug("Queue deleted", queue_id=queue_id)
 
         return {"status": "Success", "queue_id": queue_id}

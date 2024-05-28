@@ -155,11 +155,14 @@ class QueueIdEndpoint(Resource):
             request_id=str(uuid.uuid4()), resource="Queue", request_type="PUT", id=id
         )
         parsed_obj = request.parsed_obj  # type: ignore # noqa: F841
-        queue = self._queue_id_service.modify(
-            id,
-            name=parsed_obj["name"],
-            description=parsed_obj["description"],
-            error_if_not_found=True,
-            log=log,
+        queue = cast(
+            models.Queue,
+            self._queue_id_service.modify(
+                id,
+                name=parsed_obj["name"],
+                description=parsed_obj["description"],
+                error_if_not_found=True,
+                log=log,
+            ),
         )
         return utils.build_queue(queue)
