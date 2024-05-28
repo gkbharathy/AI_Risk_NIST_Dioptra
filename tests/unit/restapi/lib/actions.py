@@ -93,7 +93,7 @@ def register_queue(
     Returns:
         The response from the API.
     """
-    payload = {"name": name, "description": description, "groupId": group_id}
+    payload = {"name": name, "description": description, "group": group_id}
 
     return client.post(
         f"/{V1_ROOT}/{V1_QUEUES_ROUTE}/",

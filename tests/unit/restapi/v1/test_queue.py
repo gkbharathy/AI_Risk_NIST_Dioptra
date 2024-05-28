@@ -100,7 +100,7 @@ def assert_queue_response_contents_matches_expectations(
     """
     expected_keys = {
         "id",
-        "snapshotId",
+        "snapshot",
         "group",
         "user",
         "createdOn",
@@ -114,7 +114,7 @@ def assert_queue_response_contents_matches_expectations(
 
     # Validate the non-Ref fields
     assert isinstance(response["id"], int)
-    assert isinstance(response["snapshotId"], int)
+    assert isinstance(response["snapshot"], int)
     assert isinstance(response["name"], str)
     assert isinstance(response["description"], str)
     assert isinstance(response["createdOn"], str)
@@ -192,7 +192,7 @@ def assert_retrieving_queues_works(
     query_string: dict[str, Any] = {}
 
     if group_id is not None:
-        query_string["groupId"] = group_id
+        query_string["group"] = group_id
 
     if search is not None:
         query_string["query"] = search
