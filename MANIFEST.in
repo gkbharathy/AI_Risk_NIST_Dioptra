@@ -1,6 +1,6 @@
 include CHANGELOG.md tox.ini
 recursive-include src/dioptra *.json
-recursive-include src/dioptra *.sql
+recursive-include src/dioptra *.sql.template
 recursive-include src/dioptra/restapi/db/alembic README *.mako *.ini
 
 graft docs

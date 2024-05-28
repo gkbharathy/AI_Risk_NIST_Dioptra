@@ -221,7 +221,9 @@ def assert_registering_existing_queue_name_fails(
     Raises:
         AssertionError: If the response status code is not 400.
     """
-    response = actions.register_queue(client, name=name, description="", group_id=group_id)
+    response = actions.register_queue(
+        client, name=name, description="", group_id=group_id
+    )
     assert response.status_code == 400
 
 
@@ -441,15 +443,21 @@ def test_rename_queue(
     queue_to_rename = registered_queues["queue1"]
     existing_queue = registered_queues["queue2"]
 
-    modify_queue(
+    modified_queue = modify_queue(
         client,
         queue_id=queue_to_rename["id"],
         new_name=updated_queue_name,
         new_description=queue_to_rename["description"],
-    )
+    ).get_json()
     assert_queue_name_matches_expected_name(
         client, queue_id=queue_to_rename["id"], expected_name=updated_queue_name
     )
+    queue_expected_list = [
+        modified_queue,
+        registered_queues["queue2"],
+        registered_queues["queue3"],
+    ]
+    assert_retrieving_queues_works(client, expected=queue_expected_list)
     assert_cannot_rename_queue_with_existing_name(
         client,
         queue_id=queue_to_rename["id"],

@@ -17,7 +17,7 @@
 """The server-side functions that perform queue endpoint operations."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 
 import structlog
 from flask_login import current_user
@@ -26,11 +26,13 @@ from sqlalchemy import func, select
 from structlog.stdlib import BoundLogger
 
 from dioptra.restapi.db import db, models, viewsdb
+from dioptra.restapi.errors import BackendDatabaseError, SearchNotImplementedError
 
 from .errors import QueueAlreadyExistsError, QueueDoesNotExistError
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
+RESOURCE_TYPE: Final[str] = "queue"
 
 class QueueService(object):
     """The service methods for registering and managing queues by their unique id."""
@@ -54,12 +56,17 @@ class QueueService(object):
         name: str,
         description: str,
         group_id: int,
+        commit: bool = True,
         **kwargs,
     ) -> models.Queue:
         """Create a new queue.
 
         Args:
-            name: The name of the queue.
+            name: The name of the queue. The combination of name and group_id must be
+                unique.
+            description: The description of the queue.
+            group_id: The group that will own the queue.
+            commit: If True, commit the transaction. Defaults to True.
 
         Returns:
             The newly created queue object.
@@ -69,7 +76,7 @@ class QueueService(object):
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
 
-        if self._queue_name_service.get(name, log=log) is not None:
+        if self._queue_name_service.get(name, group_id=group_id, log=log) is not None:
             log.error("Queue name already exists", name=name)
             raise QueueAlreadyExistsError
 
@@ -80,13 +87,17 @@ class QueueService(object):
         new_queue = models.Queue(
             name=name, description=description, resource=resource, creator=current_user
         )
+
         db.session.add(new_queue)
-        db.session.commit()
-        log.info(
-            "Queue registration successful",
-            queue_id=new_queue.resource_id,
-            name=new_queue.name,
-        )
+
+        if commit:
+            db.session.commit()
+            log.debug(
+                "Queue registration successful",
+                queue_id=new_queue.resource_id,
+                name=new_queue.name,
+            )
+
         return new_queue
 
     def get(
@@ -96,18 +107,34 @@ class QueueService(object):
         page_length: int,
         **kwargs,
     ) -> Any:
-        """Fetch the list of all queues.
+        """Fetch a list of queues, optionally filtering by search string and paging
+        parameters.
+
+        Args:
+            search_string: A search string used to filter results.
+            page_index: The index of the first group to be returned.
+            page_length: The maximum number of queues to be returned.
 
         Returns:
-            - A list of fetched queues.
-            - A count of the total number of queues matching the query
+            A tuple containing a list of queues and the total number of queues matching
+            the query.
+
+        Raises:
+            SearchNotImplementedError: If a search string is provided.
+            BackendDatabaseError: If the database query returns a None when counting
+                the number of queues.
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
-        log.info("Get full list of queues")
+        log.debug("Get full list of queues")
 
         if search_string:
-            log.warn("Searching is not implemented", search_string=search_string)
+            log.debug("Searching is not implemented", search_string=search_string)
+            raise SearchNotImplementedError
 
+        stmt = (
+            select(func.count(models.Resource.resource_id))
+            .filter_by(resource_type=RESOURCE_TYPE, is_deleted=False)
+        )
         stmt = (
             select(func.count(models.Queue.resource_id))
             .join(models.Resource)
@@ -115,21 +142,28 @@ class QueueService(object):
         )
         total_num_queues = db.session.scalars(stmt).first()
 
+        if total_num_queues is None:
+            log.error(
+                "The database query returned a None when counting the number of "
+                "groups when it should return a number.",
+                sql=str(stmt),
+            )
+            raise BackendDatabaseError
+
         if total_num_queues == 0:
             return [], total_num_queues
 
         stmt = (
-            select(models.Queue)  # type: ignore
-            .join(models.Resource)
-            .filter_by(is_deleted=False)
+            select(models.Resource)  # type: ignore
+            .filter_by(resource_type=RESOURCE_TYPE, is_deleted=False)
             .offset(page_index)
             .limit(page_length)
         )
-        queues = db.session.scalars(stmt).all()
+        queue_resources = db.session.scalars(stmt).all()
 
         queue_snapshots = [
-            viewsdb.get_latest_queue(db, resource_id=queue.resource.resource_id)  # type: ignore
-            for queue in queues
+            viewsdb.get_latest_queue(db, resource_id=queue.resource_id)  # type: ignore
+            for queue in queue_resources
         ]
         return queue_snapshots, total_num_queues
 
@@ -172,7 +206,7 @@ class QueueIdService(object):
                 is True.
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
-        log.info("Get queue by id", queue_id=queue_id)
+        log.debug("Get queue by id", queue_id=queue_id)
 
         queue = viewsdb.get_latest_queue(db, resource_id=queue_id)
 
@@ -186,7 +220,13 @@ class QueueIdService(object):
         return queue
 
     def modify(
-        self, queue_id: int, name: str, description: str, **kwargs
+        self,
+        queue_id: int,
+        name: str,
+        description: str,
+        error_if_not_found: bool = False,
+        commit: bool = True,
+        **kwargs,
     ) -> models.Queue:
         """Rename a queue.
 
@@ -194,24 +234,33 @@ class QueueIdService(object):
             queue_id: The unique id of the queue.
             name: The new name of the queue.
             description: The new description of the queue.
+            error_if_not_found: If True, raise an error if the group is not found.
+                Defaults to False.
+            commit: If True, commit the transaction. Defaults to True.
 
         Returns:
             The updated queue object.
 
         Raises:
-            QueueDoesNotExistError: If the queue is not found.
-            QueueAlreadyExistsError: If the queue name already exists
+            QueueDoesNotExistError: If the queue is not found and `error_if_not_found`
+                is True.
+            QueueAlreadyExistsError: If the queue name already exists.
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
 
-        if self._queue_name_service.get(name, log=log) is not None:
+        queue = viewsdb.get_latest_queue(db, resource_id=queue_id)
+
+        group_id = queue.resource.group_id
+        if self._queue_name_service.get(name, group_id=group_id, log=log) is not None:
             log.error("Queue name already exists", name=name)
             raise QueueAlreadyExistsError
 
-        queue = viewsdb.get_latest_queue(db, resource_id=queue_id)
-
         if queue is None:
-            raise QueueDoesNotExistError
+            if error_if_not_found:
+                log.debug("Queue not found", queue_id=queue_id)
+                raise QueueDoesNotExistError
+
+            return None
 
         new_queue = models.Queue(
             name=name,
@@ -220,14 +269,16 @@ class QueueIdService(object):
             creator=current_user,
         )
         db.session.add(new_queue)
-        db.session.commit()
 
-        log.info(
-            "Queue modified",
-            queue_id=queue.resource_id,
-            name=name,
-            description=description,
-        )
+        if commit:
+            db.session.commit()
+            log.debug(
+                "Queue modification successful",
+                queue_id=queue.resource_id,
+                name=name,
+                description=description,
+            )
+
         return new_queue
 
     def delete(self, queue_id: int, **kwargs) -> dict[str, Any]:
@@ -254,7 +305,7 @@ class QueueIdService(object):
         db.session.add(deleted_resource_lock)
         db.session.commit()
 
-        log.info("Queue deleted", queue_id=queue_id)
+        log.debug("Queue deleted", queue_id=queue_id)
 
         return {"status": "Success", "queue_id": queue_id}
 
@@ -265,7 +316,7 @@ class QueueNameService(object):
     def get(
         self,
         name: str,
-        # group_id: int,
+        group_id: int,
         error_if_not_found: bool = False,
         **kwargs,
     ) -> models.Queue | None:
@@ -285,19 +336,11 @@ class QueueNameService(object):
                 is True.
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
-        log.info("Get queue by name", queue_name=name)
+        log.debug("Get queue by name", queue_name=name)
 
-        stmt = select(models.Queue).filter_by(name=name)
-        resource: models.Queue | None = db.session.scalars(stmt).first()
-
-        if resource is None or resource.resource.is_deleted:
-            if error_if_not_found:
-                log.error("Queue not found", name=name)
-                raise QueueDoesNotExistError
-
-            return None
-
-        queue = viewsdb.get_latest_queue(db, resource_id=resource.resource_id)
+        queue = viewsdb.get_latest_queue_by_group_and_name(
+            db, group_id=group_id, name=name
+        )
 
         if queue is None:
             if error_if_not_found:

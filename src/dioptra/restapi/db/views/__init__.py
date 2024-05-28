@@ -21,7 +21,7 @@
 # from .ml_models import get_latest_ml_model
 # from .plugin_task_parameter_types import get_latest_plugin_task_parameter_type
 # from .plugins import get_latest_plugin, get_latest_plugin_files
-from .queues import get_latest_queue
+from .queues import get_latest_queue, get_latest_queue_by_group_and_name
 
 __all__ = [
     # "get_latest_artifact",
@@ -36,4 +36,5 @@ __all__ = [
     # "get_latest_plugin_task_parameter_type",
     # "get_latest_plugin",
     "get_latest_queue",
+    "get_latest_queue_by_group_and_name",
 ]
