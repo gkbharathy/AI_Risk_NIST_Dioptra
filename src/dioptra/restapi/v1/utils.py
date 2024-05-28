@@ -22,6 +22,7 @@ from dioptra.restapi.db import models
 
 USERS: Final[str] = "users"
 GROUPS: Final[str] = "groups"
+QUEUES: Final[str] = "queues"
 TAGS: Final[str] = "tags"
 
 # -- Ref Types -----------------------------------------------------------------
@@ -82,7 +83,7 @@ def build_queue_ref(queue: models.Queue) -> dict[str, Any]:
     return {
         "id": queue.queue_id,
         "name": queue.name,
-        "url": f"/queue/{queue.queue_id}",
+        "url": f"/{QUEUES}/{queue.queue_id}",
     }
 
 
@@ -178,7 +179,7 @@ def build_queue(queue: models.Queue) -> dict[str, Any]:
         "group": build_group_ref(queue.resource.owner),
         "created_on": queue.created_on,
         "last_modified_on": queue.resource.last_modified_on,
-        "latest_snapshot": True,
+        "latest_snapshot": True,  # TODO: need to set this
         "tags": [build_tag_ref(tag) for tag in queue.tags],
     }
 

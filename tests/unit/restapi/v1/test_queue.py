@@ -191,11 +191,11 @@ def assert_retrieving_queues_works(
 
     query_string: dict[str, Any] = {}
 
-    if group_id is not None:
-        query_string["group"] = group_id
+    # if group_id is not None:
+    query_string["group_id"] = group_id
 
     if search is not None:
-        query_string["query"] = search
+        query_string["search"] = search
 
     if paging_info is not None:
         query_string["index"] = paging_info["index"]
@@ -374,7 +374,6 @@ def test_queue_search_query(
     )
 
 
-@pytest.mark.v1_test
 def test_queue_group_query(
     client: FlaskClient,
     db: SQLAlchemy,

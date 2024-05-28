@@ -103,6 +103,7 @@ class QueueService(object):
 
     def get(
         self,
+        group_id: int | None,
         search_string: str,
         page_index: int,
         page_length: int,
@@ -112,6 +113,7 @@ class QueueService(object):
         parameters.
 
         Args:
+            group_id: A group ID used to filter results.
             search_string: A search string used to filter results.
             page_index: The index of the first group to be returned.
             page_length: The maximum number of queues to be returned.
@@ -128,6 +130,11 @@ class QueueService(object):
         log: BoundLogger = kwargs.get("log", LOGGER.new())
         log.debug("Get full list of queues")
 
+        filters = dict()
+
+        if group_id is not None:
+            filters["group_id"] = group_id
+
         if search_string:
             log.debug("Searching is not implemented", search_string=search_string)
             raise SearchNotImplementedError
@@ -136,9 +143,8 @@ class QueueService(object):
             resource_type=RESOURCE_TYPE, is_deleted=False
         )
         stmt = (
-            select(func.count(models.Queue.resource_id))
-            .join(models.Resource)
-            .filter_by(is_deleted=False)
+            select(func.count(models.Resource.resource_id))
+            .filter_by(**filters, resource_type=RESOURCE_TYPE, is_deleted=False)
         )
         total_num_queues = db.session.scalars(stmt).first()
 
@@ -155,7 +161,7 @@ class QueueService(object):
 
         stmt = (
             select(models.Resource)  # type: ignore
-            .filter_by(resource_type=RESOURCE_TYPE, is_deleted=False)
+            .filter_by(**filters, resource_type=RESOURCE_TYPE, is_deleted=False)
             .offset(page_index)
             .limit(page_length)
         )

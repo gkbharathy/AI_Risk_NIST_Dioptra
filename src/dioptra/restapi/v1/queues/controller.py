@@ -69,11 +69,13 @@ class QueueEndpoint(Resource):
         )
         parsed_query_params = request.parsed_query_params  # noqa: F841
 
+        group_id = parsed_query_params["group_id"]
         search_string = parsed_query_params["search"]
         page_index = parsed_query_params["index"]
         page_length = parsed_query_params["page_length"]
 
         queues, total_num_queues = self._queue_service.get(
+            group_id=group_id,
             search_string=search_string,
             page_index=page_index,
             page_length=page_length,
