@@ -92,7 +92,7 @@ def build_queue_ref(queue: models.Queue) -> dict[str, Any]:
     }
 
 
-# -- Full Types ----------------------------------------------------------------
+# -- Ref Types -----------------------------------------------------------------
 
 
 def build_user(user: models.User) -> dict[str, Any]:
@@ -290,6 +290,6 @@ def build_paging_url(
     query_params: dict[str, Any] = {"index": index, "pageLength": length}
 
     if search:
-        query_params["query"] = search
+        query_params["search"] = search
 
     return urlunparse(("", "", f"/{resource_type}/", "", urlencode(query_params), ""))
