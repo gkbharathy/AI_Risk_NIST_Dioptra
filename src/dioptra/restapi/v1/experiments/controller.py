@@ -24,16 +24,27 @@ from flask import request
 from flask_accepts import accepts, responds
 from flask_login import login_required
 from flask_restx import Namespace, Resource
+from injector import inject
 from structlog.stdlib import BoundLogger
 
 from dioptra.restapi.v1.jobs.schema import JobSchema
 from dioptra.restapi.v1.schemas import IdStatusResponseSchema
+from dioptra.restapi.v1.shared.drafts.controller import (
+    ResourcesDraftsEndpoint,
+    ResourcesDraftsIdEndpoint,
+    ResourcesIdDraftEndpoint,
+)
 
 from .schema import (
     ExperimentGetQueryParameters,
     ExperimentMutableFieldsSchema,
     ExperimentPageSchema,
     ExperimentSchema,
+)
+from .service import (  # ExperimentIdService,; ExperimentService,
+    ExperimentDraftIdService,
+    ExperimentDraftService,
+    ExperimentIdDraftService,
 )
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
@@ -43,7 +54,6 @@ api: Namespace = Namespace("Experiments", description="Experiments endpoint")
 
 @api.route("/")
 class ExperimentEndpoint(Resource):
-
     @login_required
     @accepts(query_params_schema=ExperimentGetQueryParameters, api=api)
     @responds(schema=ExperimentPageSchema, api=api)
@@ -87,7 +97,6 @@ class ExperimentEndpoint(Resource):
 @api.route("/<int:id>")
 @api.param("id", "An integer identifying a registered experiment.")
 class ExperimentIdEndpoint(Resource):
-
     @login_required
     @responds(schema=ExperimentSchema, api=api)
     def get(self, id: int):
@@ -124,7 +133,6 @@ class ExperimentIdEndpoint(Resource):
 @api.route("/<int:id>/jobs")
 @api.param("id", "An integer identifying a registered experiment.")
 class ExperimentIdJobEndpoint(Resource):
-
     @login_required
     @accepts(query_params_schema=ExperimentGetQueryParameters, api=api)
     @responds(schema=JobSchema(many=True), api=api)
@@ -135,3 +143,61 @@ class ExperimentIdJobEndpoint(Resource):
         )  # noqa: F841
         log.info("Request received")
         # return self._experiment_service.get_jobs(id, error_if_not_found=True, log=log)
+
+
+@api.route("/drafts/")
+class ExperimentsDraftsEndpoint(ResourcesDraftsEndpoint):
+    """ """
+
+    @inject
+    def __init__(self, draft_service: ExperimentDraftService, *args, **kwargs) -> None:
+        """Initialize the experiment resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A ExperimentService object.
+        """
+        self._draft_service = draft_service
+        self._resource_name = "experiment"
+        super().__init__(*args, **kwargs)
+
+
+@api.route("/drafts/<int:draft_id>")
+@api.param("draft_id", "ID for the Draft of the Experiment resource.")
+class ExperimentsDraftsIdEndpoint(ResourcesDraftsIdEndpoint):
+    """ """
+
+    @inject
+    def __init__(
+        self, draft_service: ExperimentDraftIdService, *args, **kwargs
+    ) -> None:
+        """Initialize the experiment resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A ExperimentDraftIdService object.
+        """
+        self._draft_id_service = draft_service
+        super().__init__(*args, **kwargs)
+
+
+@api.route("/<int:id>/draft")
+@api.param("id", "ID for the Experiment resource.")
+class ExperimentsIdDraftEndpoint(ResourcesIdDraftEndpoint):
+    """ """
+
+    @inject
+    def __init__(
+        self, draft_service: ExperimentIdDraftService, *args, **kwargs
+    ) -> None:
+        """Initialize the experiment resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A ExperimentIdDraftService object.
+        """
+        self._id_draft_service = draft_service
+        super().__init__(*args, **kwargs)

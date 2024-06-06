@@ -28,6 +28,11 @@ from structlog.stdlib import BoundLogger
 from dioptra.restapi.db import db, models
 from dioptra.restapi.errors import BackendDatabaseError
 from dioptra.restapi.v1.groups.service import GroupIdService
+from dioptra.restapi.v1.shared.drafts.service import (
+    ResourceDraftIdService,
+    ResourceDraftService,
+    ResourceIdDraftService,
+)
 from dioptra.restapi.v1.shared.search_parser import construct_sql_query_filters
 
 from .errors import QueueAlreadyExistsError, QueueDoesNotExistError
@@ -83,6 +88,7 @@ class QueueService(object):
 
         Raises:
             QueueAlreadyExistsError: If a queue with the given name already exists.
+            GroupDoesNotExistError: If the group with the provided ID does not exist.
         """
         log: BoundLogger = kwargs.get("log", LOGGER.new())
 
@@ -188,10 +194,7 @@ class QueueIdService(object):
     """The service methods for registering and managing queues by their unique id."""
 
     @inject
-    def __init__(
-        self,
-        queue_name_service: QueueNameService,
-    ) -> None:
+    def __init__(self, queue_name_service: QueueNameService) -> None:
         """Initialize the queue service.
 
         All arguments are provided via dependency injection.
@@ -253,7 +256,7 @@ class QueueIdService(object):
         commit: bool = True,
         **kwargs,
     ) -> models.Queue | None:
-        """Rename a queue.
+        """Modify a queue.
 
         Args:
             queue_id: The unique id of the queue.
@@ -384,3 +387,27 @@ class QueueNameService(object):
             return None
 
         return queue
+
+
+class QueueDraftService(ResourceDraftService):
+    """The service methods for managing queue drafts."""
+
+    @inject
+    def __init__(self, group_id_service: GroupIdService) -> None:
+        super().__init__(RESOURCE_TYPE, group_id_service)
+
+
+class QueueDraftIdService(ResourceDraftIdService):
+    """The service methods for managing a specific queue draft."""
+
+    @inject
+    def __init__(self) -> None:
+        super().__init__(RESOURCE_TYPE)
+
+
+class QueueIdDraftService(ResourceIdDraftService):
+    """The service methods for managing the draft for an existing queue."""
+
+    @inject
+    def __init__(self) -> None:
+        super().__init__(RESOURCE_TYPE)

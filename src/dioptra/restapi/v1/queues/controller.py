@@ -32,6 +32,11 @@ from structlog.stdlib import BoundLogger
 from dioptra.restapi.db import models
 from dioptra.restapi.v1 import utils
 from dioptra.restapi.v1.schemas import IdStatusResponseSchema
+from dioptra.restapi.v1.shared.drafts.controller import (
+    ResourcesDraftsEndpoint,
+    ResourcesDraftsIdEndpoint,
+    ResourcesIdDraftEndpoint,
+)
 
 from .schema import (
     QueueGetQueryParameters,
@@ -39,7 +44,13 @@ from .schema import (
     QueuePageSchema,
     QueueSchema,
 )
-from .service import QueueIdService, QueueService
+from .service import (
+    QueueDraftIdService,
+    QueueDraftService,
+    QueueIdDraftService,
+    QueueIdService,
+    QueueService,
+)
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
@@ -156,7 +167,7 @@ class QueueIdEndpoint(Resource):
         log = LOGGER.new(
             request_id=str(uuid.uuid4()), resource="Queue", request_type="PUT", id=id
         )
-        parsed_obj = request.parsed_obj  # type: ignore # noqa: F841
+        parsed_obj = request.parsed_obj  # type: ignore
         queue = cast(
             models.Queue,
             self._queue_id_service.modify(
@@ -168,3 +179,57 @@ class QueueIdEndpoint(Resource):
             ),
         )
         return utils.build_queue(queue)
+
+
+@api.route("/drafts/")
+class QueuesDraftsEndpoint(ResourcesDraftsEndpoint):
+    """ """
+
+    @inject
+    def __init__(self, draft_service: QueueDraftService, *args, **kwargs) -> None:
+        """Initialize the queue resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A QueueService object.
+        """
+        self._draft_service = draft_service
+        self._resource_name = "queue"
+        super().__init__(*args, **kwargs)
+
+
+@api.route("/drafts/<int:draft_id>")
+@api.param("draft_id", "ID for the Draft of the Queue resource.")
+class QueuesDraftsIdEndpoint(ResourcesDraftsIdEndpoint):
+    """ """
+
+    @inject
+    def __init__(self, draft_service: QueueDraftIdService, *args, **kwargs) -> None:
+        """Initialize the queue resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A QueueDraftIdService object.
+        """
+        self._draft_id_service = draft_service
+        super().__init__(*args, **kwargs)
+
+
+@api.route("/<int:id>/draft")
+@api.param("id", "ID for the Queue resource.")
+class QueuesIdDraftEndpoint(ResourcesIdDraftEndpoint):
+    """ """
+
+    @inject
+    def __init__(self, draft_service: QueueIdDraftService, *args, **kwargs) -> None:
+        """Initialize the queue resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            draft_service: A QueueIdDraftService object.
+        """
+        self._id_draft_service = draft_service
+        super().__init__(*args, **kwargs)

@@ -95,6 +95,7 @@ def register_v1_routes(api: Api) -> None:
     from .v1.plugin_parameter_types.controller import api as plugin_parameter_types_api
     from .v1.plugins.controller import api as plugins_api
     from .v1.queues.controller import api as queues_api
+    from .v1.shared.drafts.controller import api as drafts_api
     from .v1.tags.controller import api as tags_api
     from .v1.users.controller import api as users_api
 
@@ -112,3 +113,4 @@ def register_v1_routes(api: Api) -> None:
     api.add_namespace(queues_api, path=f"/{V1_ROOT}/{V1_QUEUES_ROUTE}")
     api.add_namespace(tags_api, path=f"/{V1_ROOT}/{V1_TAGS_ROUTE}")
     api.add_namespace(users_api, path=f"/{V1_ROOT}/{V1_USERS_ROUTE}")
+    api.add_namespace(drafts_api)

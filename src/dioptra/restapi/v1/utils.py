@@ -215,6 +215,51 @@ def build_plugin(plugin: models.Plugin) -> dict[str, Any]:
     }
 
 
+def build_existing_resource_draft(
+    draft: models.DraftResource, num_other_drafts: int
+) -> dict[str, Any]:
+    """Build a Draft response dictionary for a modification of an existing resource.
+
+    Args:
+        queue: The Draft object to convert into a Draft response dictionary.
+
+    Returns:
+        The Draft response dictionary.
+    """
+    return {
+        "id": draft.draft_resource_id,
+        "resource_id": draft.payload["resource_id"],
+        "resource_snapshot_id": draft.payload["resource_snapshot_id"],
+        "payload": draft.payload["resource_data"],
+        "resource_type": draft.resource_type,
+        "user": build_user_ref(draft.creator),
+        "group": build_group_ref(draft.target_owner),
+        "created_on": draft.created_on,
+        "last_modified_on": draft.last_modified_on,
+        "num_other_drafts": num_other_drafts,
+    }
+
+
+def build_new_resource_draft(draft: models.DraftResource) -> dict[str, Any]:
+    """Build a Draft response dictionary for a new resource.
+
+    Args:
+        queue: The Draft object to convert into a Draft response dictionary.
+
+    Returns:
+        The Draft response dictionary.
+    """
+    return {
+        "id": draft.draft_resource_id,
+        "payload": draft.payload["resource_data"],
+        "resource_type": draft.resource_type,
+        "user": build_user_ref(draft.creator),
+        "group": build_group_ref(draft.target_owner),
+        "created_on": draft.created_on,
+        "last_modified_on": draft.last_modified_on,
+    }
+
+
 # -- Paging --------------------------------------------------------------------
 
 
