@@ -238,3 +238,54 @@ def assert_new_draft_is_not_found(
         follow_redirects=True,
     )
     assert response.status_code == 404
+
+
+def assert_retrieving_versions_works(
+    client: FlaskClient,
+    resource_route: str,
+    resource_id: int,
+    expected: dict[str, Any],
+) -> None:
+    """Assert that retrieving a queue by id works.
+
+    Args:
+        client: The Flask test client.
+        resource_route: The route for the resource type.
+        resource_id: The id of the resource to retrieve versions for.
+        expected: The expected response from the API.
+
+    Raises:
+        AssertionError: If the response status code is not 200 or if the API response
+            does not match the expected response.
+    """
+    response = client.get(
+        f"/{V1_ROOT}/{resource_route}/{resource_id}/versions", follow_redirects=True
+    )
+    assert response.status_code == 200 and response.get_json()["data"] == expected
+
+
+def assert_retrieving_version_by_number_works(
+    client: FlaskClient,
+    resource_route: str,
+    resource_id: int,
+    version_number: int,
+    expected: dict[str, Any],
+) -> None:
+    """Assert that retrieving a queue by id works.
+
+    Args:
+        client: The Flask test client.
+        resource_route: The route for the resource type.
+        resource_id: The id of the resource to retrieve a version of.
+        version_number: The sequential version number to retrieve.
+        expected: The expected response from the API.
+
+    Raises:
+        AssertionError: If the response status code is not 200 or if the API response
+            does not match the expected response.
+    """
+    response = client.get(
+        f"/{V1_ROOT}/{resource_route}/{resource_id}/versions/{version_number}",
+        follow_redirects=True,
+    )
+    assert response.status_code == 200 and response.get_json() == expected

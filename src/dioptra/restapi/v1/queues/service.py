@@ -17,7 +17,7 @@
 """The server-side functions that perform queue endpoint operations."""
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, Final, Type
 
 import structlog
 from flask_login import current_user
@@ -34,6 +34,10 @@ from dioptra.restapi.v1.shared.drafts.service import (
     ResourceIdDraftService,
 )
 from dioptra.restapi.v1.shared.search_parser import construct_sql_query_filters
+from dioptra.restapi.v1.shared.versions.service import (
+    ResourceVersionsNumberService,
+    ResourceVersionsService,
+)
 
 from .errors import QueueAlreadyExistsError, QueueDoesNotExistError
 
@@ -166,7 +170,7 @@ class QueueService(object):
         if total_num_queues is None:
             log.error(
                 "The database query returned a None when counting the number of "
-                "groups when it should return a number.",
+                "queues when it should return a number.",
                 sql=str(stmt),
             )
             raise BackendDatabaseError
@@ -387,6 +391,34 @@ class QueueNameService(object):
             return None
 
         return queue
+
+
+class QueueVersionsService(ResourceVersionsService):
+    """The service methods for managing queue versions."""
+
+    @property
+    def resource_type(self) -> str:
+        return RESOURCE_TYPE
+
+    @property
+    def searchable_fields(self) -> dict[str, Any]:
+        return SEARCHABLE_FIELDS
+
+    @property
+    def ResourceModel(self) -> Type[models.Queue]:
+        return models.Queue
+
+
+class QueueVersionsNumberService(ResourceVersionsNumberService):
+    """The service methods for managing queue versions."""
+
+    @property
+    def resource_type(self) -> str:
+        return RESOURCE_TYPE
+
+    @property
+    def ResourceModel(self) -> Type[models.Queue]:
+        return models.Queue
 
 
 class QueueDraftService(ResourceDraftService):

@@ -270,7 +270,7 @@ def build_paging_envelope(
     query: str | None,
     index: int,
     length: int,
-    total_num_elements: bool,
+    total_num_elements: int,
 ) -> dict[str, Any]:
     """Build the paging envelope for a response.
 

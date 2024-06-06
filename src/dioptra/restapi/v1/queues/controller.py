@@ -50,6 +50,8 @@ from .service import (
     QueueIdDraftService,
     QueueIdService,
     QueueService,
+    QueueVersionsNumberService,
+    QueueVersionsService,
 )
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
@@ -176,6 +178,96 @@ class QueueIdEndpoint(Resource):
                 description=parsed_obj["description"],
                 error_if_not_found=True,
                 log=log,
+            ),
+        )
+        return utils.build_queue(queue)
+
+
+@api.route("/<int:id>/versions")
+@api.param("id", "ID for the Queue resource.")
+class QueuesVersionsEndpoint(Resource):
+    @inject
+    def __init__(
+        self, queue_versions_service: QueueVersionsService, *args, **kwargs
+    ) -> None:
+        """Initialize the queue queue.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            queue_versions_service: A QueueVersionsService object.
+        """
+        self._queue_versions_service = queue_versions_service
+        super().__init__(*args, **kwargs)
+
+    @login_required
+    @accepts(query_params_schema=QueueGetQueryParameters, api=api)
+    @responds(schema=QueuePageSchema, api=api)
+    def get(self, id: int):
+        """Gets the Versions for the queue."""
+        log = LOGGER.new(
+            request_id=str(uuid.uuid4()), resource="Queue", request_type="GET"
+        )
+
+        parsed_query_params = request.parsed_query_params  # type: ignore
+        search_string = unquote(parsed_query_params["search"])
+        page_index = parsed_query_params["index"]
+        page_length = parsed_query_params["page_length"]
+
+        versions, total_num_versions = cast(
+            tuple[list[models.Queue], int],
+            self._queue_versions_service.get(
+                resource_id=id,
+                search_string=search_string,
+                page_index=page_index,
+                page_length=page_length,
+                error_if_not_found=True,
+                log=log,
+            ),
+        )
+        return utils.build_paging_envelope(
+            f"queue/{id}/versions",
+            build_fn=utils.build_queue,
+            data=versions,
+            query=search_string,
+            index=page_index,
+            length=page_length,
+            total_num_elements=total_num_versions,
+        )
+
+
+@api.route("/<int:id>/versions/<int:version_number>")
+@api.param("id", "ID for the Queue resource.")
+@api.param("version_number", "ID for the Queue resource.")
+class ResourcesVersionsNumberEndpoint(Resource):
+    @inject
+    def __init__(
+        self,
+        queue_versions_number_service: QueueVersionsNumberService,
+        *args,
+        **kwargs,
+    ) -> None:
+        """Initialize the queue resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            queue_versions_number_service: A QueueVersionsNumberService object.
+        """
+        self._queue_versions_number_service = queue_versions_number_service
+        super().__init__(*args, **kwargs)
+
+    @login_required
+    @responds(schema=QueueSchema, api=api)
+    def get(self, id: int, version_number: int):
+        """Gets a Version for the resource by version number."""
+        log = LOGGER.new(
+            request_id=str(uuid.uuid4()), resource="Queue", request_type="GET"
+        )
+        queue = cast(
+            models.Queue,
+            self._queue_versions_number_service.get(
+                id, version_number=version_number, error_if_not_found=True, log=log
             ),
         )
         return utils.build_queue(queue)
