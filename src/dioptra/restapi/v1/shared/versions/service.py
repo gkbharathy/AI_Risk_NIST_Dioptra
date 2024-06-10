@@ -186,4 +186,11 @@ class ResourceVersionsNumberService(object):
         )
         snapshot = db.session.scalars(stmt).first()
 
+        if snapshot is None:
+            if error_if_not_found:
+                log.debug("Resource version not found", version_number=version_number)
+                raise ResourceDoesNotExistError
+
+            return None
+
         return snapshot
