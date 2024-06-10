@@ -173,7 +173,6 @@ def assert_draft_response_contents_matches_expectations(
         assert isinstance(response["resourceSnapshot"], int)
         assert isinstance(response["numOtherDrafts"], int)
         assert response["resource"] == expected_contents["resource_id"]
-        assert response["resourceSnapshot"] == expected_contents["resource_snapshot_id"]
         assert response["numOtherDrafts"] == expected_contents["num_other_drafts"]
 
     assert helpers.is_iso_format(response["createdOn"])
@@ -288,4 +287,6 @@ def assert_retrieving_version_by_number_works(
         f"/{V1_ROOT}/{resource_route}/{resource_id}/versions/{version_number}",
         follow_redirects=True,
     )
+    print(response.get_json())
+    print(expected)
     assert response.status_code == 200 and response.get_json() == expected

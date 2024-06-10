@@ -132,7 +132,7 @@ class ResourceDraftService(object):
         draft_payload = {
             "resource_data": payload,
             "resource_id": None,
-            "resource_snapshot_id": None,
+            "version_number": None,
         }
 
         draft = models.DraftResource(

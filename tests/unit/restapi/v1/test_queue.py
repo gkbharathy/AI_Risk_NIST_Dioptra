@@ -99,7 +99,7 @@ def assert_queue_response_contents_matches_expectations(
     """
     expected_keys = {
         "id",
-        "snapshot",
+        "versionNumber",
         "group",
         "user",
         "createdOn",
@@ -113,7 +113,7 @@ def assert_queue_response_contents_matches_expectations(
 
     # Validate the non-Ref fields
     assert isinstance(response["id"], int)
-    assert isinstance(response["snapshot"], int)
+    assert isinstance(response["versionNumber"], int)
     assert isinstance(response["name"], str)
     assert isinstance(response["description"], str)
     assert isinstance(response["createdOn"], str)
@@ -532,7 +532,6 @@ def test_manage_existing_queue_draft(
         "user_id": auth_account["id"],
         "group_id": queue["group"]["id"],
         "resource_id": queue["id"],
-        "resource_snapshot_id": queue["snapshot"],
         "num_other_drafts": 0,
         "payload": payload,
     }
@@ -556,7 +555,6 @@ def test_manage_existing_queue_draft(
         "user_id": auth_account["id"],
         "group_id": queue["group"]["id"],
         "resource_id": queue["id"],
-        "resource_snapshot_id": queue["snapshot"],
         "num_other_drafts": 0,
         "payload": payload,
     }
@@ -704,14 +702,14 @@ def test_manage_queue_versions(
         client,
         resource_route=V1_QUEUES_ROUTE,
         resource_id=queue_to_rename["id"],
-        version_number=0,
+        version_number=1,
         expected=queue_to_rename,
     )
     asserts.assert_retrieving_version_by_number_works(
         client,
         resource_route=V1_QUEUES_ROUTE,
         resource_id=queue_to_rename["id"],
-        version_number=1,
+        version_number=2,
         expected=modified_queue,
     )
     expected_versions = [queue_to_rename, modified_queue]

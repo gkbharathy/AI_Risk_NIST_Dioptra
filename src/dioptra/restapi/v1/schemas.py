@@ -31,9 +31,8 @@ def generate_base_resource_schema(name: str, snapshot: bool) -> type[Schema]:
             metadata=dict(description=f"ID for the {name} resource."),
             dump_only=True,
         ),
-        "snapshotId": fields.Integer(
-            attribute="snapshot_id",
-            data_key="snapshot",
+        "versionNumber": fields.Integer(
+            attribute="version_number",
             metadata=dict(description=f"ID for the underlying {name} snapshot."),
             dump_only=True,
         ),
@@ -97,7 +96,7 @@ def generate_base_resource_schema(name: str, snapshot: bool) -> type[Schema]:
 
 
 def generate_base_resource_ref_schema(
-    name: str, keep_snapshot_id: bool = False
+    name: str, keep_version_number: bool = False
 ) -> type[Schema]:
     """Generates the base schema for a ResourceRef."""
     from dioptra.restapi.v1.groups.schema import GroupRefSchema
@@ -107,8 +106,8 @@ def generate_base_resource_ref_schema(
             attribute="id",
             metadata=dict(description=f"ID for the {name} resource."),
         ),
-        "snapshotId": fields.Integer(
-            attribute="id",
+        "versionNumber": fields.Integer(
+            attribute="version_number",
             metadata=dict(description=f"Snapshot ID for the {name} resource."),
         ),
         "group": fields.Nested(
@@ -123,8 +122,8 @@ def generate_base_resource_ref_schema(
         ),
     }
 
-    if not keep_snapshot_id:
-        schema.pop("snapshotId")
+    if not keep_version_number:
+        schema.pop("versionNumber")
 
     return Schema.from_dict(schema, name="f{name}RefBaseSchema")
 

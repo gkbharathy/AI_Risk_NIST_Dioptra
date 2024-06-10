@@ -185,7 +185,7 @@ def build_queue(queue: models.Queue) -> dict[str, Any]:
     """
     return {
         "id": queue.resource_id,
-        "snapshot_id": queue.resource_snapshot_id,
+        "version_number": queue.version_number,
         "name": queue.name,
         "description": queue.description,
         "user": build_user_ref(queue.creator),
@@ -201,7 +201,7 @@ def build_queue(queue: models.Queue) -> dict[str, Any]:
 def build_plugin(plugin: models.Plugin) -> dict[str, Any]:
     return {
         "id": plugin.resource_id,
-        "snapshot_id": plugin.resource_snapshot_id,
+        "version_number": plugin.version_number,
         "name": plugin.name,
         "description": plugin.description,
         "user": build_user_ref(plugin.creator),

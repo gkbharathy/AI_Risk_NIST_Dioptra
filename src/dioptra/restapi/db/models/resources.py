@@ -32,7 +32,13 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
-from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
+from sqlalchemy.orm import (
+    Mapped,
+    column_property,
+    mapped_column,
+    object_session,
+    relationship,
+)
 
 from dioptra.restapi.db.db import (
     bigint,
@@ -170,6 +176,20 @@ class ResourceSnapshot(db.Model):  # type: ignore[name-defined]
     )
     description: Mapped[optionalstr] = mapped_column(index=True)
     created_on: Mapped[datetimetz] = mapped_column(init=False, nullable=False)
+
+    # Derived fields (read-only)
+    @property
+    def version_number(self):
+        return object_session(self).scalar(
+            select(func.count(ResourceSnapshot.resource_id))
+            .join(Resource)
+            .where(
+                Resource.resource_id == self.resource_id,
+                Resource.is_deleted == False,  # noqa: E712
+            )
+            .order_by(ResourceSnapshot.created_on)
+            .where(ResourceSnapshot.created_on <= self.created_on)
+        )
 
     # Relationships
     resource: Mapped["Resource"] = relationship(

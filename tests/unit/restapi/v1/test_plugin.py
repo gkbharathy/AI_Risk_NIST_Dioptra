@@ -99,7 +99,7 @@ def assert_plugin_response_contents_matches_expectations(
     """
     expected_keys = {
         "id",
-        "snapshot",
+        "versionNumber",
         "group",
         "user",
         "createdOn",
@@ -114,7 +114,7 @@ def assert_plugin_response_contents_matches_expectations(
 
     # Validate the non-Ref fields
     assert isinstance(response["id"], int)
-    assert isinstance(response["snapshot"], int)
+    assert isinstance(response["versionNumber"], int)
     assert isinstance(response["name"], str)
     assert isinstance(response["description"], str)
     assert isinstance(response["createdOn"], str)
@@ -169,7 +169,7 @@ def assert_plugin_file_response_contents_matches_expectations(
     """
     expected_keys = {
         "id",
-        "snapshot",
+        "versionNumber",
         "group",
         "user",
         "createdOn",
@@ -184,14 +184,14 @@ def assert_plugin_file_response_contents_matches_expectations(
 
     # Validate the non-Ref fields
     assert isinstance(response["id"], int)
-    assert isinstance(response["snapshot"], int)
+    assert isinstance(response["versionNumber"], int)
     assert isinstance(response["filename"], str)
     assert isinstance(response["description"], str)
     assert isinstance(response["contents"], str)
     assert isinstance(response["createdOn"], str)
     assert isinstance(response["lastModifiedOn"], str)
     assert isinstance(response["latestSnapshot"], bool)
-    
+
     assert response["filename"] == expected_contents["filename"]
     assert response["description"] == expected_contents["description"]
     assert response["contents"] == expected_contents["contents"]
