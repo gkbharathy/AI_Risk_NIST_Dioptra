@@ -238,7 +238,7 @@ class QueuesVersionsEndpoint(Resource):
 
 @api.route("/<int:id>/versions/<int:version_number>")
 @api.param("id", "ID for the Queue resource.")
-@api.param("version_number", "ID for the Queue resource.")
+@api.param("version_number", "Version number for the Queue resource.")
 class ResourcesVersionsNumberEndpoint(Resource):
     @inject
     def __init__(
