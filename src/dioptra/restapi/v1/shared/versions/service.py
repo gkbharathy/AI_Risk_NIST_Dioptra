@@ -181,7 +181,7 @@ class ResourceVersionsNumberService(object):
                 models.Resource.is_deleted == False,  # noqa: E712
             )
             .order_by(self.ResourceModel.created_on)
-            .offset(version_number)
+            .offset(version_number - 1)
             .limit(1)
         )
         snapshot = db.session.scalars(stmt).first()
