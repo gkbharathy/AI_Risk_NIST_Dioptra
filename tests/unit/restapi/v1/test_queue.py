@@ -52,7 +52,7 @@ def modify_queue(
     Returns:
         The response from the API.
     """
-    payload = {"name": new_name, "description": new_description}
+    payload: dict[str, Any] = {"name": new_name, "description": new_description}
 
     return client.put(
         f"/{V1_ROOT}/{V1_QUEUES_ROUTE}/{queue_id}",
@@ -61,7 +61,7 @@ def modify_queue(
     )
 
 
-def delete_queue_with_id(
+def delete_queue(
     client: FlaskClient,
     queue_id: int,
 ) -> TestResponse:
@@ -74,7 +74,6 @@ def delete_queue_with_id(
     Returns:
         The response from the API.
     """
-
     return client.delete(
         f"/{V1_ROOT}/{V1_QUEUES_ROUTE}/{queue_id}",
         follow_redirects=True,
@@ -189,10 +188,7 @@ def assert_retrieving_queues_works(
             does not match the expected response.
     """
 
-    query_string: dict[str, Any] = {}
-
-    # if group_id is not None:
-    query_string["group_id"] = group_id
+    query_string: dict[str, Any] = {"groupId": group_id}
 
     if search is not None:
         query_string["search"] = search
@@ -222,7 +218,7 @@ def assert_registering_existing_queue_name_fails(
         AssertionError: If the response status code is not 400.
     """
     response = actions.register_queue(
-        client, name=name, description="", group_id=group_id
+        client, name=name, group_id=group_id
     )
     assert response.status_code == 400
 
@@ -313,12 +309,12 @@ def test_create_queue(
     description = "The first queue."
     user_id = auth_account["id"]
     group_id = auth_account["groups"][0]["id"]
-    queue1_response = actions.register_queue(
+    queue_response = actions.register_queue(
         client, name=name, description=description, group_id=group_id
     )
-    queue1_expected = queue1_response.get_json()
+    queue_expected = queue_response.get_json()
     assert_queue_response_contents_matches_expectations(
-        response=queue1_expected,
+        response=queue_expected,
         expected_contents={
             "name": name,
             "description": description,
@@ -327,7 +323,7 @@ def test_create_queue(
         },
     )
     assert_retrieving_queue_by_id_works(
-        client, queue_id=queue1_expected["id"], expected=queue1_expected
+        client, queue_id=queue_expected["id"], expected=queue_expected
     )
 
 
@@ -412,7 +408,6 @@ def test_cannot_register_existing_queue_name(
     - The request fails with an appropriate error message and response code.
     """
     existing_queue = registered_queues["queue1"]
-
     assert_registering_existing_queue_name_fails(
         client,
         name=existing_queue["name"],
@@ -495,6 +490,5 @@ def test_delete_queue_by_id(
     - The request fails with an appropriate error message and response code.
     """
     queue_to_delete = registered_queues["queue1"]
-
-    delete_queue_with_id(client, queue_id=queue_to_delete["id"])
+    delete_queue(client, queue_id=queue_to_delete["id"])
     assert_queue_is_not_found(client, queue_id=queue_to_delete["id"])
