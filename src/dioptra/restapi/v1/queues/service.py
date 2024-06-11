@@ -87,7 +87,7 @@ class QueueService(object):
 
         group = self._group_id_service.get(group_id, error_if_not_found=True)
 
-        resource = models.Resource(resource_type="queue", owner=group)
+        resource = models.Resource(resource_type="RESOURCE_TYPE", owner=group)
         new_queue = models.Queue(
             name=name, description=description, resource=resource, creator=current_user
         )
