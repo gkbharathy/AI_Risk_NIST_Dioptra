@@ -38,7 +38,7 @@ from dioptra.restapi.v1.groups.service import GroupIdService
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
 
-class ResourceDraftService(object):
+class ResourceDraftsService(object):
     """The service methods for managing resource drafts."""
 
     @inject
@@ -150,9 +150,10 @@ class ResourceDraftService(object):
         return draft
 
 
-class ResourceDraftIdService(object):
+class ResourceDraftsIdService(object):
     """The service methods for managing a specific resource draft."""
 
+    @inject
     def __init__(self, resource_type: str):
         self._resource_type = resource_type
 
@@ -187,6 +188,7 @@ class ResourceDraftIdService(object):
         draft = db.session.scalars(stmt).first()
 
         if draft is None:
+            log.info("NOT FOUND", draft_id=draft_id, resource_type=self._resource_type)
             if error_if_not_found:
                 log.debug("Draft not found", draft_resource_id=draft_id)
                 raise DraftDoesNotExistError

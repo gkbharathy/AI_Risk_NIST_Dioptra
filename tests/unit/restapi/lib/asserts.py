@@ -190,8 +190,6 @@ def assert_draft_response_contents_matches_expectations(
     assert isinstance(response["group"]["url"], str)
     assert response["group"]["id"] == expected_contents["group_id"]
 
-    print("response", response["payload"])
-    print("expected", expected_contents["payload"])
     assert response["payload"] == expected_contents["payload"]
 
 
@@ -287,6 +285,4 @@ def assert_retrieving_version_by_number_works(
         f"/{V1_ROOT}/{resource_route}/{resource_id}/versions/{version_number}",
         follow_redirects=True,
     )
-    print(response.get_json())
-    print(expected)
     assert response.status_code == 200 and response.get_json() == expected

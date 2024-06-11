@@ -337,4 +337,4 @@ def build_paging_url(
     if search:
         query_params["query"] = search
 
-    return urlunparse(("", "", f"/{resource_type}/", "", urlencode(query_params), ""))
+    return urlunparse(("", "", f"{resource_type}/", "", urlencode(query_params), ""))

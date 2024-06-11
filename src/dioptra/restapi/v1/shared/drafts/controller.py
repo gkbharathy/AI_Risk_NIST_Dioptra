@@ -24,6 +24,7 @@ from flask import request
 from flask_accepts import accepts, responds
 from flask_login import login_required
 from flask_restx import Namespace, Resource
+from injector import AssistedBuilder, Injector
 from structlog.stdlib import BoundLogger
 
 from dioptra.restapi.v1 import utils
@@ -38,138 +39,167 @@ from .schema import (
     DraftNewResourceSchema,
     DraftPageSchema,
 )
+from .service import (
+    ResourceDraftsIdService,
+    ResourceDraftsService,
+    ResourceIdDraftService,
+)
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
-api: Namespace = Namespace("Drafts", description="Drafts sub-endpoint")
+injector = Injector()
 
 
-class ResourcesDraftsEndpoint(Resource):
-    @login_required
-    @accepts(query_params_schema=PagingQueryParametersSchema, api=api)
-    @responds(schema=DraftPageSchema, api=api)
-    def get(self):
-        """Gets the Drafts for the resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
-        )
-        parsed_query_params = request.parsed_query_params  # noqa: F841
+def generate_resource_drafts_endpoint(api: Namespace, resource_name: str):
+    """
+    Generates an Resource class
 
-        page_index = parsed_query_params["index"]
-        page_length = parsed_query_params["page_length"]
+    Args:
+        api: The API
+        resource_name: The name of the resource
+    """
 
-        drafts, total_num_drafts = self._draft_service.get(
-            page_index, page_length, log=log
-        )
-        return utils.build_paging_envelope(
-            f"{self._resource_name}/drafts",
-            build_fn=utils.build_new_resource_draft,
-            data=drafts,
-            query=None,
-            index=page_index,
-            length=page_length,
-            total_num_elements=total_num_drafts,
-        )
+    builder = injector.get(AssistedBuilder[ResourceDraftsService])
+    draft_service = builder.build(resource_type=resource_name)
 
-    @login_required
-    @accepts(schema=DraftNewResourceSchema, api=api)
-    @responds(schema=DraftNewResourceSchema, api=api)
-    def post(self):
-        """Creates a Draft for the resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
-        )
-        parsed_obj = request.parsed_obj  # noqa: F841
-        draft = self._draft_service.create(
-            parsed_obj["group_id"], parsed_obj["payload"], log=log
-        )
-        return utils.build_new_resource_draft(draft)
+    @api.route("/drafts/")
+    class ResourceDraftsEndpoint(Resource):
+        @login_required
+        @accepts(query_params_schema=PagingQueryParametersSchema, api=api)
+        @responds(schema=DraftPageSchema, api=api)
+        def get(self):
+            """Gets the Drafts for the resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
+            )
+            parsed_query_params = request.parsed_query_params  # noqa: F841
 
+            page_index = parsed_query_params["index"]
+            page_length = parsed_query_params["page_length"]
 
-class ResourcesDraftsIdEndpoint(Resource):
-    @login_required
-    @responds(schema=DraftNewResourceSchema, api=api)
-    def get(self, draft_id: int):
-        """Gets a Draft for the resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
-        )
-        draft = self._draft_id_service.get(draft_id, error_if_not_found=True, log=log)
-        return utils.build_new_resource_draft(draft)
+            drafts, total_num_drafts = draft_service.get(
+                page_index, page_length, log=log
+            )
+            return utils.build_paging_envelope(
+                f"{api.path}/drafts",
+                build_fn=utils.build_new_resource_draft,
+                data=drafts,
+                query=None,
+                index=page_index,
+                length=page_length,
+                total_num_elements=total_num_drafts,
+            )
 
-    @login_required
-    @accepts(schema=DraftMutableFieldsSchema, api=api)
-    @responds(schema=DraftNewResourceSchema, api=api)
-    def put(self, draft_id: int):
-        """Modifies a Draft for the resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
-        )
-        parsed_obj = request.parsed_obj  # type: ignore
-        draft = self._draft_id_service.modify(
-            draft_id, payload=parsed_obj["payload"], log=log
-        )
-        return utils.build_new_resource_draft(draft)
-
-    @login_required
-    @responds(schema=IdStatusResponseSchema, api=api)
-    def delete(self, draft_id: int):
-        """Deletes a Draft for the resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="DELETE"
-        )
-        return self._draft_id_service.delete(draft_id, log=log)
+        @login_required
+        @accepts(schema=DraftNewResourceSchema, api=api)
+        @responds(schema=DraftNewResourceSchema, api=api)
+        def post(self):
+            """Creates a Draft for the resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
+            )
+            parsed_obj = request.parsed_obj  # noqa: F841
+            draft = draft_service.create(
+                parsed_obj["group_id"], parsed_obj["payload"], log=log
+            )
+            return utils.build_new_resource_draft(draft)
 
 
-@api.route("/<int:id>/draft")
-@api.param("id", "ID for the resource.")
-class ResourcesIdDraftEndpoint(Resource):
-    @login_required
-    @responds(schema=DraftExistingResourceSchema, api=api)
-    def get(self, id: int):
-        """Gets the Draft for this resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
-        )
-        draft, num_other_drafts = self._id_draft_service.get(
-            id, error_if_not_found=True, log=log
-        )
-        return utils.build_existing_resource_draft(draft, num_other_drafts)
+def generate_resource_drafts_id_endpoint(api: Namespace, resource_name: str):
+    builder = injector.get(AssistedBuilder[ResourceDraftsIdService])
+    draft_id_service = builder.build(resource_type=resource_name)
 
-    @login_required
-    @accepts(schema=DraftExistingResourceSchema, api=api)
-    @responds(schema=DraftExistingResourceSchema, api=api)
-    def post(self, id: int):
-        """Creates a Draft for this resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
-        )
-        parsed_obj = request.parsed_obj  # type: ignore
-        draft, num_other_drafts = self._id_draft_service.create(
-            id, payload=parsed_obj["payload"], log=log
-        )
-        return utils.build_existing_resource_draft(draft, num_other_drafts)
+    @api.route("/drafts/<int:draft_id>")
+    @api.param("draft_id", f"ID for the Draft of the {resource_name} resource.")
+    class ResourcesDraftsIdEndpoint(Resource):
+        @login_required
+        @responds(schema=DraftNewResourceSchema, api=api)
+        def get(self, draft_id: int):
+            """Gets a Draft for the resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
+            )
+            log.info("HERE")
+            draft = draft_id_service.get(draft_id, error_if_not_found=True, log=log)
+            return utils.build_new_resource_draft(draft)
 
-    @login_required
-    @accepts(schema=DraftMutableFieldsSchema, api=api)
-    @responds(schema=DraftExistingResourceSchema, api=api)
-    def put(self, id: int):
-        """Modifies the Draft for this resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
-        )
-        parsed_obj = request.parsed_obj  # type: ignore
-        draft, num_other_drafts = self._id_draft_service.modify(
-            id, payload=parsed_obj["payload"], error_if_not_found=True, log=log
-        )
-        log.info("controller", payload=draft.payload)
-        return utils.build_existing_resource_draft(draft, num_other_drafts)
+        @login_required
+        @accepts(schema=DraftMutableFieldsSchema, api=api)
+        @responds(schema=DraftNewResourceSchema, api=api)
+        def put(self, draft_id: int):
+            """Modifies a Draft for the resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
+            )
+            parsed_obj = request.parsed_obj  # type: ignore
+            draft = draft_id_service.modify(
+                draft_id, payload=parsed_obj["payload"], log=log
+            )
+            return utils.build_new_resource_draft(draft)
 
-    @login_required
-    @responds(schema=IdStatusResponseSchema, api=api)
-    def delete(self, id: int):
-        """Deletes the Draft for this resource."""
-        log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Draft", request_type="DELETE"
-        )
-        return self._id_draft_service.delete(id, log=log)
+        @login_required
+        @responds(schema=IdStatusResponseSchema, api=api)
+        def delete(self, draft_id: int):
+            """Deletes a Draft for the resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="DELETE"
+            )
+            return draft_id_service.delete(draft_id, log=log)
+
+
+def generate_resource_id_draft_endpoint(api: Namespace, resource_name: str):
+    builder = injector.get(AssistedBuilder[ResourceIdDraftService])
+    id_draft_service = builder.build(resource_type=resource_name)
+
+    @api.route("/<int:id>/draft")
+    @api.param("id", "ID for the resource.")
+    class ResourcesIdDraftEndpoint(Resource):
+        @login_required
+        @responds(schema=DraftExistingResourceSchema, api=api)
+        def get(self, id: int):
+            """Gets the Draft for this resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="GET"
+            )
+            draft, num_other_drafts = id_draft_service.get(
+                id, error_if_not_found=True, log=log
+            )
+            return utils.build_existing_resource_draft(draft, num_other_drafts)
+
+        @login_required
+        @accepts(schema=DraftExistingResourceSchema, api=api)
+        @responds(schema=DraftExistingResourceSchema, api=api)
+        def post(self, id: int):
+            """Creates a Draft for this resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
+            )
+            parsed_obj = request.parsed_obj  # type: ignore
+            draft, num_other_drafts = id_draft_service.create(
+                id, payload=parsed_obj["payload"], log=log
+            )
+            return utils.build_existing_resource_draft(draft, num_other_drafts)
+
+        @login_required
+        @accepts(schema=DraftMutableFieldsSchema, api=api)
+        @responds(schema=DraftExistingResourceSchema, api=api)
+        def put(self, id: int):
+            """Modifies the Draft for this resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="POST"
+            )
+            parsed_obj = request.parsed_obj  # type: ignore
+            draft, num_other_drafts = id_draft_service.modify(
+                id, payload=parsed_obj["payload"], error_if_not_found=True, log=log
+            )
+            log.info("controller", payload=draft.payload)
+            return utils.build_existing_resource_draft(draft, num_other_drafts)
+
+        @login_required
+        @responds(schema=IdStatusResponseSchema, api=api)
+        def delete(self, id: int):
+            """Deletes the Draft for this resource."""
+            log = LOGGER.new(
+                request_id=str(uuid.uuid4()), resource="Draft", request_type="DELETE"
+            )
+            return id_draft_service.delete(id, log=log)

@@ -28,11 +28,6 @@ from structlog.stdlib import BoundLogger
 from dioptra.restapi.db import db, models
 from dioptra.restapi.errors import BackendDatabaseError
 from dioptra.restapi.v1.groups.service import GroupIdService
-from dioptra.restapi.v1.shared.drafts.service import (
-    ResourceDraftIdService,
-    ResourceDraftService,
-    ResourceIdDraftService,
-)
 from dioptra.restapi.v1.shared.search_parser import construct_sql_query_filters
 from dioptra.restapi.v1.shared.versions.service import (
     ResourceVersionsNumberService,
@@ -419,27 +414,3 @@ class QueueVersionsNumberService(ResourceVersionsNumberService):
     @property
     def ResourceModel(self) -> Type[models.Queue]:
         return models.Queue
-
-
-class QueueDraftService(ResourceDraftService):
-    """The service methods for managing queue drafts."""
-
-    @inject
-    def __init__(self, group_id_service: GroupIdService) -> None:
-        super().__init__(RESOURCE_TYPE, group_id_service)
-
-
-class QueueDraftIdService(ResourceDraftIdService):
-    """The service methods for managing a specific queue draft."""
-
-    @inject
-    def __init__(self) -> None:
-        super().__init__(RESOURCE_TYPE)
-
-
-class QueueIdDraftService(ResourceIdDraftService):
-    """The service methods for managing the draft for an existing queue."""
-
-    @inject
-    def __init__(self) -> None:
-        super().__init__(RESOURCE_TYPE)
