@@ -14,18 +14,22 @@
 #
 # ACCESS THE FULL CC BY 4.0 LICENSE HERE:
 # https://creativecommons.org/licenses/by/4.0/legalcode
-"""The module defining the endpoints for Queue resources."""
+"""The module defining the endpoints for Tag resources."""
 from __future__ import annotations
 
 import uuid
+from typing import cast
 
 import structlog
 from flask import request
 from flask_accepts import accepts, responds
 from flask_login import login_required
 from flask_restx import Namespace, Resource
+from injector import inject
 from structlog.stdlib import BoundLogger
 
+from dioptra.restapi.db import models
+from dioptra.restapi.v1 import utils
 from dioptra.restapi.v1.schemas import IdStatusResponseSchema, ResourceUrlsSchema
 
 from .schema import (
@@ -35,6 +39,7 @@ from .schema import (
     TagResourceQueryParameters,
     TagSchema,
 )
+from .service import TagIdService, TagService
 
 LOGGER: BoundLogger = structlog.stdlib.get_logger()
 
@@ -43,6 +48,18 @@ api: Namespace = Namespace("Tags", description="Tags endpoint")
 
 @api.route("/")
 class TagEndpoint(Resource):
+    @inject
+    def __init__(self, tag_service: TagService, *args, **kwargs) -> None:
+        """Initialize the tag resource.
+
+        All arguments are provided via dependency injection.
+
+        Args:
+            tag_service: A TagService object.
+        """
+        self._tag_service = tag_service
+        super().__init__(*args, **kwargs)
+
     @login_required
     @accepts(query_params_schema=TagGetQueryParameters, api=api)
     @responds(schema=TagPageSchema, api=api)
@@ -58,12 +75,21 @@ class TagEndpoint(Resource):
     @accepts(schema=TagSchema, api=api)
     @responds(schema=TagSchema, api=api)
     def post(self):
-        """Creates a Tag."""
+        """Creates a Tag Resource."""
         log = LOGGER.new(
-            request_id=str(uuid.uuid4()), resource="Queue", request_type="POST"
+            request_id=str(uuid.uuid4()), resource="Tag", request_type="POST"
         )
         log.debug("Request received")
         parsed_obj = request.parsed_obj  # noqa: F841
+
+        tag = self._tag_service.create(
+            name=parsed_obj["name"],
+            description=parsed_obj["description"],
+            group_id=parsed_obj["group_id"],
+            log=log,
+        )
+        return utils.build_queue(tag)
+
 
 
 @api.route("/<int:id>")

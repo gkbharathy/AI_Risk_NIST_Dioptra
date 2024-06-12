@@ -15,6 +15,8 @@
 # ACCESS THE FULL CC BY 4.0 LICENSE HERE:
 # https://creativecommons.org/licenses/by/4.0/legalcode
 """The server-side functions that perform tags endpoint operations."""
+from __future__ import annotations
+
 from typing import Any, Final
 
 import structlog
@@ -110,8 +112,8 @@ class TagService(object):
         page_length: int,
         **kwargs,
     ) -> Any:
-        """Fetch a list of tags, optionally filtering by group id, search string, and paging
-        parameters.
+        """Fetch a list of tags, optionally filtering by group id, search string,
+        and paging parameters.
 
         Args:
             group_id: A group ID used to filter results.
@@ -276,8 +278,7 @@ class TagIdService(object):
         group_id = tag.resource.group_id
         if (
             name != tag.name
-            and self._tag_name_service.get(name, group_id=group_id, log=log)
-            is not None
+            and self._tag_name_service.get(name, group_id=group_id, log=log) is not None
         ):
             log.debug("Tag name already exists", name=name, group_id=group_id)
             raise TagAlreadyExistsError
