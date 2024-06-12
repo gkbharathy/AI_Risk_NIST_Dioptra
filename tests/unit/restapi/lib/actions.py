@@ -21,6 +21,7 @@ API endpoints.
 """
 
 from typing import Any
+
 from flask.testing import FlaskClient
 from werkzeug.test import TestResponse
 
@@ -150,6 +151,7 @@ def register_group(
         follow_redirects=True,
     )
 
+
 def get_public_group(client: FlaskClient) -> TestResponse:
     """Get the public group.
 
@@ -159,6 +161,4 @@ def get_public_group(client: FlaskClient) -> TestResponse:
     Returns:
         The response from the API.
     """
-    return client.get(
-        f"/{V1_ROOT}/{V1_GROUPS_ROUTE}/1", follow_redirects=True
-    )
+    return client.get(f"/{V1_ROOT}/{V1_GROUPS_ROUTE}/1", follow_redirects=True)

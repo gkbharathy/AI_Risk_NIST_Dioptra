@@ -286,7 +286,10 @@ def test_create_tag(
     user_id = auth_account["id"]
     group_id = auth_account["groups"][0]["id"]
     tag_response = actions.register_tag(
-        client, name=name, description=description, group_id=group_id,
+        client,
+        name=name,
+        description=description,
+        group_id=group_id,
     )
     tag_expected = tag_response.get_json()
     assert_tag_response_contents_matches_expectations(
@@ -373,8 +376,8 @@ def test_rename_tag(
     existing_tag = registered_tags["tag2"]
 
     modify_tag(
-        client, 
-        tag_id=tag_to_rename["id"], 
+        client,
+        tag_id=tag_to_rename["id"],
         new_name=updated_tag_name,
         new_description=tag_to_rename["description"],
     )
