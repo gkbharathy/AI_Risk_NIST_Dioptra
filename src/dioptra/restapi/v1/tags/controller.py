@@ -71,6 +71,28 @@ class TagEndpoint(Resource):
         log.debug("Request received")
         parsed_query_params = request.parsed_query_params  # noqa: F841
 
+        group_id = parsed_query_params["group_id"]
+        search_string = parsed_query_params["search"]
+        page_index = parsed_query_params["index"]
+        page_length = parsed_query_params["page_length"]
+
+        tags, total_num_tags = self._tag_service.get(
+            group_id=group_id,
+            search_string=search_string,
+            page_index=page_index,
+            page_length=page_length,
+            log=log,
+        )
+        return utils.build_paging_envelope(
+            "tags",
+            build_fn=utils.build_tag,
+            data=tags,
+            query=search_string,
+            index=page_index,
+            length=page_length,
+            total_num_elements=total_num_tags,
+        )
+
     @login_required
     @accepts(schema=TagSchema, api=api)
     @responds(schema=TagSchema, api=api)
@@ -88,8 +110,7 @@ class TagEndpoint(Resource):
             group_id=parsed_obj["group_id"],
             log=log,
         )
-        return utils.build_queue(tag)
-
+        return utils.build_tag(tag)
 
 
 @api.route("/<int:id>")

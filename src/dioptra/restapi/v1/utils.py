@@ -215,6 +215,23 @@ def build_plugin(plugin: models.Plugin) -> dict[str, Any]:
     }
 
 
+def build_tag(tag: models.Tag) -> dict[str, Any]:
+    """Build a Tag response dictionary.
+    Args:
+        tag: The Tag object to convert into a Tag response dictionary.
+    Returns:
+        The Tag response dictionary.
+    """
+    return {
+        "id": tag.tag_id,
+        "name": tag.name,
+        "user": build_user_ref(tag.creator),
+        "group": build_group_ref(tag.owner),
+        "created_on": tag.created_on,
+        "last_modified_on": tag.last_modified_on,
+    }
+
+
 # -- Paging --------------------------------------------------------------------
 
 
