@@ -839,7 +839,6 @@ class TestQueue(TestResource):
     def __init__(self, client, api_route):
         super().__init__(client, api_route)
 
-    
     def assert_queue_response_contents_matches_expectations(
         self,
         response: dict[str, Any], 
@@ -849,6 +848,16 @@ class TestQueue(TestResource):
         assert isinstance(response["description"], str)
         assert response["name"] == expected_contents["name"]
         assert response["description"] == expected_contents["description"]
+
+    def assert_registering_existing_name_fails(
+        self,
+        name: str,
+        group_id: int,
+    ) -> None:
+        response = actions.register_queue(
+            self.client, name=name, description="", group_id=group_id
+        )
+        assert response.status_code == 400
 
 
 def test_register_queue(
@@ -970,3 +979,25 @@ def test_query_queue(
     test_dioptra_client.assert_retrieving_all_works(
         expected=queue_expected_list, group_id=auth_account["groups"][0]["id"],
     )
+
+
+def test_cannot_register_existing_name_queue(
+    flask_client: FlaskClient,
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+) -> None:
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
+    
+    existing_queue = registered_queues["queue1"]
+    test_flask_client.assert_registering_existing_name_fails(
+        name=existing_queue["name"],
+        group_id=existing_queue["group"]["id"],
+    )
+    test_dioptra_client.assert_registering_existing_name_fails(
+        name=existing_queue["name"],
+        group_id=existing_queue["group"]["id"],
+    )
+    
