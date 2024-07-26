@@ -26,9 +26,13 @@ from flask.testing import FlaskClient
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.test import TestResponse
 
+from dioptra.client._client import DioptraClient
 from dioptra.restapi.routes import V1_ENTRYPOINTS_ROUTE, V1_QUEUES_ROUTE, V1_ROOT
 
 from ..lib import actions, asserts, helpers
+from test import TestResource
+
+QUEUES_ROUTE = f"/{V1_ROOT}/{V1_QUEUES_ROUTE}"
 
 # -- Actions ---------------------------------------------------------------------------
 
@@ -825,3 +829,60 @@ def test_tag_queue(
         client, resource_route=V1_QUEUES_ROUTE, resource_id=queue["id"]
     )
     asserts.assert_tags_response_contents_matches_expectations(response.get_json(), [])
+
+
+def test_register_queue(
+    flask_client: FlaskClient,
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+) -> None:
+    name = "tensorflow_cpu"
+    description = "The first queue."
+    user_id = auth_account["id"]
+    group_id = auth_account["groups"][0]["id"]
+    expected_keys = {
+        "id",
+        "snapshot",
+        "group",
+        "user",
+        "createdOn",
+        "lastModifiedOn",
+        "latestSnapshot",
+        "hasDraft",
+        "name",
+        "description",
+        "tags",
+    }
+    expected_contents={
+        "name": name,
+        "description": description,
+        "user_id": user_id,
+        "group_id": group_id,
+    }
+
+    test_flask_client = TestResource(client=flask_client, api_route=QUEUES_ROUTE)
+    expected_queue_response = test_flask_client.register(
+        name=name, description=description, group_id=group_id
+    )
+    test_flask_client.assert_response_contents_matches_expectations(
+        expected_keys=expected_keys,
+        response=expected_queue_response,
+        expected_contents=expected_contents,
+    )
+    test_flask_client.assert_retrieving_by_id_works(
+        id=expected_queue_response["id"], expected=expected_queue_response
+    )
+
+    test_dioptra_client = TestResource(client=dioptra_client, api_route=QUEUES_ROUTE)
+    expected_queue_response = test_dioptra_client.register(
+        name=name, description=description, group_id=group_id
+    )
+    test_dioptra_client.assert_response_contents_matches_expectations(
+        expected_keys=expected_keys,
+        response=expected_queue_response,
+        expected_contents=expected_contents,
+    )
+    test_dioptra_client.assert_retrieving_by_id_works(
+        id=expected_queue_response["id"], expected=expected_queue_response
+    )
