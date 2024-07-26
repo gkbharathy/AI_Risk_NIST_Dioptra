@@ -831,6 +831,26 @@ def test_tag_queue(
     asserts.assert_tags_response_contents_matches_expectations(response.get_json(), [])
 
 
+# -- Updated Tests ---------------------------------------------------------------------
+
+
+class TestQueue(TestResource):
+
+    def __init__(self, client, api_route):
+        super().__init__(client, api_route)
+
+    
+    def assert_queue_response_contents_matches_expectations(
+        self,
+        response: dict[str, Any], 
+        expected_contents: dict[str, Any],
+    ) -> None:
+        assert isinstance(response["name"], str)
+        assert isinstance(response["description"], str)
+        assert response["name"] == expected_contents["name"]
+        assert response["description"] == expected_contents["description"]
+
+
 def test_register_queue(
     flask_client: FlaskClient,
     dioptra_client: DioptraClient,
@@ -861,12 +881,16 @@ def test_register_queue(
         "group_id": group_id,
     }
 
-    test_flask_client = TestResource(client=flask_client, api_route=QUEUES_ROUTE)
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
     expected_queue_response = test_flask_client.register(
         name=name, description=description, group_id=group_id
     )
-    test_flask_client.assert_response_contents_matches_expectations(
+    test_flask_client.assert_base_response_contents_matches_expectations(
         expected_keys=expected_keys,
+        response=expected_queue_response,
+        expected_contents=expected_contents,
+    )
+    test_flask_client.assert_queue_response_contents_matches_expectations(
         response=expected_queue_response,
         expected_contents=expected_contents,
     )
@@ -874,12 +898,16 @@ def test_register_queue(
         id=expected_queue_response["id"], expected=expected_queue_response
     )
 
-    test_dioptra_client = TestResource(client=dioptra_client, api_route=QUEUES_ROUTE)
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
     expected_queue_response = test_dioptra_client.register(
         name=name, description=description, group_id=group_id
     )
-    test_dioptra_client.assert_response_contents_matches_expectations(
+    test_dioptra_client.assert_base_response_contents_matches_expectations(
         expected_keys=expected_keys,
+        response=expected_queue_response,
+        expected_contents=expected_contents,
+    )
+    test_dioptra_client.assert_queue_response_contents_matches_expectations(
         response=expected_queue_response,
         expected_contents=expected_contents,
     )

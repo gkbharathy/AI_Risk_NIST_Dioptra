@@ -32,7 +32,7 @@ class TestResource(object):
         )
 
 
-    def assert_response_contents_matches_expectations(
+    def assert_base_response_contents_matches_expectations(
         self,
         expected_keys: set[str],
         response: dict[str, Any], 
