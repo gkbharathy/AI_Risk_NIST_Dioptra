@@ -874,6 +874,18 @@ class TestQueue(TestResource):
         )
         assert response.status_code == 400
 
+    def assert_queue_is_not_associated_with_entrypoint(
+        self, entrypoint_id: int, queue_id: int
+    ) -> None:
+        response = self.client.get(
+            f"/{V1_ROOT}/{V1_ENTRYPOINTS_ROUTE}/{entrypoint_id}",
+            follow_redirects=True,
+        )
+        entrypoint = response.get_json()
+        queue_ids = set(queue["id"] for queue in entrypoint["queues"])
+
+        assert response.status_code == 200 and queue_id not in queue_ids
+
 
 def test_register_queue_flask_client(
     flask_client: FlaskClient,
@@ -1132,3 +1144,39 @@ def test_modify_queue_dioptra_client(
         existing_name=existing_queue["name"],
         new_description=queue_to_rename["description"],
     ) # existing name of another registered queue
+
+
+def test_delete_queue_flask_client(
+    flask_client: FlaskClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+    registered_entrypoints: dict[str, Any],
+) -> None:
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
+    entrypoint = registered_entrypoints["entrypoint1"]
+    queue_to_delete = entrypoint["queues"][0]
+
+    test_flask_client.delete(id=queue_to_delete["id"])
+    test_flask_client.assert_resource_is_not_found(id=queue_to_delete["id"])
+    test_flask_client.assert_queue_is_not_associated_with_entrypoint(
+        entrypoint_id=entrypoint["id"], queue_id=queue_to_delete["id"]
+    )
+
+
+def test_delete_queue_dioptra_client(
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+    registered_entrypoints: dict[str, Any],
+) -> None:
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
+    entrypoint = registered_entrypoints["entrypoint1"]
+    queue_to_delete = entrypoint["queues"][0]
+
+    test_dioptra_client.delete(id=queue_to_delete["id"])
+    test_dioptra_client.assert_resource_is_not_found(id=queue_to_delete["id"])
+    test_dioptra_client.assert_queue_is_not_associated_with_entrypoint(
+        entrypoint_id=entrypoint["id"], queue_id=queue_to_delete["id"]
+    )
