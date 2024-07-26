@@ -13,13 +13,13 @@ class TestResource(object):
         self.client = client
         self.api_route = api_route
 
-    def register(self, **kwargs) -> None:
+    def register(self, **kwargs) -> TestResponse:
         payload = kwargs
         return self.client.post(
             self.api_route,
             json=payload,
             follow_redirects=True,
-        ).get_json()
+        )
 
     def modify(
         self, id: int, new_name: str, new_description: str

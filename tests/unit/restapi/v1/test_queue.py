@@ -840,9 +840,7 @@ class TestQueue(TestResource):
         super().__init__(client, api_route)
 
     def assert_queue_response_contents_matches_expectations(
-        self,
-        response: dict[str, Any], 
-        expected_contents: dict[str, Any],
+        self, response: dict[str, Any], expected_contents: dict[str, Any],
     ) -> None:
         assert isinstance(response["name"], str)
         assert isinstance(response["description"], str)
@@ -850,19 +848,35 @@ class TestQueue(TestResource):
         assert response["description"] == expected_contents["description"]
 
     def assert_registering_existing_name_fails(
-        self,
-        name: str,
-        group_id: int,
+        self, name: str, group_id: int,
     ) -> None:
         response = actions.register_queue(
             self.client, name=name, description="", group_id=group_id
         )
         assert response.status_code == 400
 
+    def assert_name_matches_expected(
+        self, queue_id: int, expected_name: str
+    ) -> None:
+        response = self.client.get(
+            f"/{self.api_route}/{queue_id}",
+            follow_redirects=True,
+        )
+        assert response.status_code == 200 and response.get_json()["name"] == expected_name
 
-def test_register_queue(
+    def assert_cannot_rename_with_existing_name(
+        self, queue_id: int, existing_name: str, new_description: str
+    ) -> None:
+        response = self.modify(
+            id=queue_id,
+            new_name=existing_name,
+            new_description=new_description,
+        )
+        assert response.status_code == 400
+
+
+def test_register_queue_flask_client(
     flask_client: FlaskClient,
-    dioptra_client: DioptraClient,
     db: SQLAlchemy,
     auth_account: dict[str, Any],
 ) -> None:
@@ -893,7 +907,7 @@ def test_register_queue(
     test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
     expected_queue_response = test_flask_client.register(
         name=name, description=description, group_id=group_id
-    )
+    ).get_json()
     test_flask_client.assert_base_response_contents_matches_expectations(
         expected_keys=expected_keys,
         response=expected_queue_response,
@@ -907,10 +921,40 @@ def test_register_queue(
         id=expected_queue_response["id"], expected=expected_queue_response
     )
 
+
+def test_register_queue_dioptra_client(
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+) -> None:
+    name = "tensorflow_cpu"
+    description = "The first queue."
+    user_id = auth_account["id"]
+    group_id = auth_account["groups"][0]["id"]
+    expected_keys = {
+        "id",
+        "snapshot",
+        "group",
+        "user",
+        "createdOn",
+        "lastModifiedOn",
+        "latestSnapshot",
+        "hasDraft",
+        "name",
+        "description",
+        "tags",
+    }
+    expected_contents={
+        "name": name,
+        "description": description,
+        "user_id": user_id,
+        "group_id": group_id,
+    }
+
     test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
     expected_queue_response = test_dioptra_client.register(
         name=name, description=description, group_id=group_id
-    )
+    ).get_json()
     test_dioptra_client.assert_base_response_contents_matches_expectations(
         expected_keys=expected_keys,
         response=expected_queue_response,
@@ -1000,4 +1044,91 @@ def test_cannot_register_existing_name_queue(
         name=existing_queue["name"],
         group_id=existing_queue["group"]["id"],
     )
-    
+
+
+def test_modify_queue_flask_client(
+    flask_client: FlaskClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+) -> None:
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
+    updated_queue_name = "updated_tensorflow_cpu"
+    queue_to_rename = registered_queues["queue1"]
+    existing_queue = registered_queues["queue2"]
+
+    renamed_queue = test_flask_client.modify(
+        id=queue_to_rename["id"],
+        new_name=updated_queue_name,
+        new_description=queue_to_rename["description"],
+    ).get_json()
+    test_flask_client.assert_name_matches_expected(
+        id=renamed_queue["id"], expected_name=updated_queue_name
+    )
+    queue_expected_list = [
+        renamed_queue,
+        registered_queues["queue2"],
+        registered_queues["queue3"],
+    ]
+    test_flask_client.assert_retrieving_all_works(
+        expected=queue_expected_list
+    )
+
+    renamed_queue_with_same_name = test_flask_client.modify(
+        id=queue_to_rename["id"],
+        new_name=updated_queue_name,
+        new_description=queue_to_rename["description"],
+    ).get_json() # same name as the one the queue already has
+    test_flask_client.assert_name_matches_expected(
+        id=renamed_queue_with_same_name["id"], expected_name=updated_queue_name
+    )
+
+    test_flask_client.assert_cannot_rename_with_existing_name(
+        queue_id=queue_to_rename["id"],
+        existing_name=existing_queue["name"],
+        new_description=queue_to_rename["description"],
+    ) # existing name of another registered queue
+
+
+def test_modify_queue_dioptra_client(
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+) -> None:
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
+    updated_queue_name = "updated_tensorflow_cpu"
+    queue_to_rename = registered_queues["queue1"]
+    existing_queue = registered_queues["queue2"]
+
+    renamed_queue = test_dioptra_client.modify(
+        id=queue_to_rename["id"],
+        new_name=updated_queue_name,
+        new_description=queue_to_rename["description"],
+    ).get_json()
+    test_dioptra_client.assert_name_matches_expected(
+        id=renamed_queue["id"], expected_name=updated_queue_name
+    )
+    queue_expected_list = [
+        renamed_queue,
+        registered_queues["queue2"],
+        registered_queues["queue3"],
+    ]
+    test_dioptra_client.assert_retrieving_all_works(
+        expected=queue_expected_list
+    )
+
+    renamed_queue_with_same_name = test_dioptra_client.modify(
+        id=queue_to_rename["id"],
+        new_name=updated_queue_name,
+        new_description=queue_to_rename["description"],
+    ).get_json() # same name as the one the queue already has
+    test_dioptra_client.assert_name_matches_expected(
+        id=renamed_queue_with_same_name["id"], expected_name=updated_queue_name
+    )
+
+    test_dioptra_client.assert_cannot_rename_with_existing_name(
+        queue_id=queue_to_rename["id"],
+        existing_name=existing_queue["name"],
+        new_description=queue_to_rename["description"],
+    ) # existing name of another registered queue
