@@ -56,8 +56,31 @@ class TestResource(object):
         assert response.status_code == 200 and response.get_json() == expected
 
 
-    def assert_retrieving_all_works(self, ) -> None:
-        return
+    def assert_retrieving_all_works(
+            self, 
+            expected: list[dict[str, Any]],
+            group_id: int | None = None,
+            search: str | None = None,
+            paging_info: dict[str, Any] | None = None,
+        ) -> None:
+        query_string: dict[str, Any] = {}
+
+        if group_id is not None:
+            query_string["groupId"] = group_id
+
+        if search is not None:
+            query_string["search"] = search
+
+        if paging_info is not None:
+            query_string["index"] = paging_info["index"]
+            query_string["pageLength"] = paging_info["page_length"]
+
+        response = self.client.get(
+            self.api_route,
+            query_string=query_string,
+            follow_redirects=True,
+        )
+        assert response.status_code == 200 and response.get_json()["data"] == expected
     
     def assert_resource_is_not_found(self, ) -> None:
         return

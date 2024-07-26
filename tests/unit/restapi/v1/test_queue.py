@@ -914,3 +914,59 @@ def test_register_queue(
     test_dioptra_client.assert_retrieving_by_id_works(
         id=expected_queue_response["id"], expected=expected_queue_response
     )
+
+
+def test_get_all_queue(
+    flask_client: FlaskClient,
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+) -> None:
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
+    
+    queue_expected_list = list(registered_queues.values())    
+    test_flask_client.assert_retrieving_all_works(expected=queue_expected_list)
+    test_dioptra_client.assert_retrieving_all_works(expected=queue_expected_list)
+
+
+def test_query_queue(
+    flask_client: FlaskClient,
+    dioptra_client: DioptraClient,
+    db: SQLAlchemy,
+    auth_account: dict[str, Any],
+    registered_queues: dict[str, Any],
+) -> None:
+    test_flask_client = TestQueue(client=flask_client, api_route=QUEUES_ROUTE)
+    test_dioptra_client = TestQueue(client=dioptra_client, api_route=QUEUES_ROUTE)
+    
+    queue_expected_list = list(registered_queues.values())[:2]
+    test_flask_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="description:*queue*"
+    )
+    test_flask_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="*queue*, name:tensorflow*"
+    )
+    test_dioptra_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="description:*queue*"
+    )
+    test_dioptra_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="*queue*, name:tensorflow*"
+    )
+    
+    queue_expected_list = list(registered_queues.values())
+    test_flask_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="*"
+    )
+    test_dioptra_client.assert_retrieving_all_works(
+        expected=queue_expected_list, search="*"
+    )
+
+    queue_expected_list = list(registered_queues.values())
+    test_flask_client.assert_retrieving_all_works(
+        expected=queue_expected_list, group_id=auth_account["groups"][0]["id"],
+    )
+    test_dioptra_client.assert_retrieving_all_works(
+        expected=queue_expected_list, group_id=auth_account["groups"][0]["id"],
+    )
