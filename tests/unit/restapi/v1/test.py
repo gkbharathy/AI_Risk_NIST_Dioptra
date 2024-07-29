@@ -60,12 +60,12 @@ class TestResource(object):
         assert response.status_code == 200 and response.get_json() == expected
 
     def assert_retrieving_all_works(
-            self, 
-            expected: list[dict[str, Any]],
-            group_id: int | None = None,
-            search: str | None = None,
-            paging_info: dict[str, Any] | None = None,
-        ) -> None:
+        self, 
+        expected: list[dict[str, Any]],
+        group_id: int | None = None,
+        search: str | None = None,
+        paging_info: dict[str, Any] | None = None,
+    ) -> None:
         query_string: dict[str, Any] = {}
 
         if group_id is not None:
